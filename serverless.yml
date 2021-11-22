@@ -1,0 +1,57 @@
+org: acroos
+app: slapdash-style
+service: slapdash-style
+frameworkVersion: '2 || 3'
+
+custom:
+  tableName: 'syntaxes-table-${sls:stage}'
+  serverless-offline:
+    httpPort: 4897
+    lambdaPort: 4898
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: '20201221'
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - Fn::GetAtt: [ SyntaxesTable, Arn ]
+  environment:
+    SYNTAXES_TABLE: ${self:custom.tableName}
+
+functions:
+  api:
+    handler: handler.handler
+    events:
+      - httpApi: '*'
+
+resources:
+  Resources:
+    SyntaxesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: PropertyName
+            AttributeType: S
+          - AttributeName: FormalSyntax
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PropertyName
+            KeyType: HASH
+          - AttributeName: FormalSyntax
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.tableName}
+
+plugins:
+  - serverless-offline
